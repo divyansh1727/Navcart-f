@@ -114,6 +114,13 @@ export default function CartPage() {
     >
       Proceed to Checkout
     </Link>
+    <button
+  onClick={() => router.push("/navigation")}
+  className="px-10 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition shadow-lg"
+>
+  Start Store Navigation 🧭
+</button>
+
   </div>
 </div>
 </div>
