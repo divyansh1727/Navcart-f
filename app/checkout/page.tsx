@@ -2,25 +2,57 @@
 
 import { useCart } from "../context/CartContext";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function CheckoutPage() {
-  const { cart } = useCart();
+  const { cart, clearCart } = useCart();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const total = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+const placeOrder = async () => {
+  if (cart.length === 0) return;
 
-  const placeOrder = () => {
-    // Fake order placement
-    router.push("/success");
-  };
+  setLoading(true);
 
+  try {
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: cart, total }),
+    });
+
+    if (!res.ok) throw new Error("Order failed");
+
+    const order = await res.json();   // 🔥 get created order
+
+    clearCart();
+
+    // 🔥 Send order id to success page
+    router.push(`/success?orderId=${order.id}`);
+  } catch (error) {
+    alert("Something went wrong while placing order");
+    setLoading(false);
+  }
+};
+
+
+  // 🔒 Protect page
   if (cart.length === 0) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-black text-white">
-        <h1 className="text-3xl font-bold">Your cart is empty 🛒</h1>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-4">Your cart is empty 🛒</h1>
+          <button
+            onClick={() => router.push("/")}
+            className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700"
+          >
+            Go Back Shopping
+          </button>
+        </div>
       </main>
     );
   }
@@ -60,10 +92,15 @@ export default function CheckoutPage() {
 
           {/* Place Order */}
           <button
+            disabled={loading}
             onClick={placeOrder}
-            className="w-full mt-6 py-4 bg-green-600 rounded-xl hover:bg-green-700 transition text-lg font-semibold shadow-lg"
+            className={`w-full mt-6 py-4 rounded-xl transition text-lg font-semibold shadow-lg
+              ${loading
+                ? "bg-gray-600 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"}
+            `}
           >
-            Place Order 🚀
+            {loading ? "Placing Order..." : "Place Order 🚀"}
           </button>
         </div>
       </div>

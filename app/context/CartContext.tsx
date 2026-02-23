@@ -8,12 +8,14 @@ type Product = {
   price: number;
   image: string;
   quantity: number;
-  position: { x: number; y: number };   
+  position: { x: number; y: number };   // 🔥 shelf location
 };
 
 type CartContextType = {
   cart: Product[];
-  addToCart: (product: Omit<Product, "quantity">) => void;
+  addToCart: (
+    product: Omit<Product, "quantity"> & { position: { x: number; y: number } }
+  ) => void;
   removeFromCart: (id: number) => void;
   increaseQty: (id: number) => void;
   decreaseQty: (id: number) => void;
@@ -38,8 +40,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("navcart-cart", JSON.stringify(cart));
   }, [cart]);
 
-  // Add to cart
-  const addToCart = (product: Omit<Product, "quantity">) => {
+  // ---------------- ADD TO CART ----------------
+  const addToCart = (
+    product: Omit<Product, "quantity"> & { position: { x: number; y: number } }
+  ) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
 
@@ -55,12 +59,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Remove completely
+  // ---------------- REMOVE COMPLETELY ----------------
   const removeFromCart = (id: number) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Increase quantity
+  // ---------------- INCREASE QTY ----------------
   const increaseQty = (id: number) => {
     setCart((prev) =>
       prev.map((item) =>
@@ -71,7 +75,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  // Decrease quantity
+  // ---------------- DECREASE QTY ----------------
   const decreaseQty = (id: number) => {
     setCart((prev) =>
       prev
@@ -83,18 +87,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
         .filter((item) => item.quantity > 0)
     );
   };
-    // 🔥 Clear cart completely (after order success)
+
+  // 🔥 CLEAR CART AFTER ORDER SUCCESS
   const clearCart = () => {
     setCart([]);
     localStorage.removeItem("navcart-cart");
   };
 
-
   return (
     <CartContext.Provider
-  value={{ cart, addToCart, removeFromCart, increaseQty, decreaseQty, clearCart }}
->
-
+      value={{
+        cart,
+        addToCart,
+        removeFromCart,
+        increaseQty,
+        decreaseQty,
+        clearCart,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

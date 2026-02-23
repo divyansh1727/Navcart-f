@@ -1,7 +1,6 @@
 "use client";
-
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-
 
 type Coord = { x: number; y: number };
 
@@ -17,15 +16,20 @@ type GridProps = {
 };
 
 export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
+  const router = useRouter();
+
   const [grid, setGrid] = useState<string[][]>([]);
   const [path, setPath] = useState<Coord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [animatedPath, setAnimatedPath] = useState<Coord[]>([{ x: 0, y: 0 }]);
   const [collected, setCollected] = useState<string[]>([]);
   const [remaining, setRemaining] = useState<Product[]>(products);
+  const [autoMode, setAutoMode] = useState(false);
 
   const start: Coord = { x: 0, y: 0 };
   const exit: Coord = { x: size - 1, y: size - 1 };
+
+  const currentCoord = animatedPath[animatedPath.length - 1];
 
   // ---------------- GRID INIT ----------------
   useEffect(() => {
@@ -49,7 +53,7 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
     g[exit.y][exit.x] = "exit";
 
     setGrid(g);
-    computePath(products);
+    computePath(products, start);
   }, []);
 
   // ---------------- BFS ----------------
@@ -113,10 +117,10 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
     return [];
   };
 
-  // ---------------- PATH COMPUTATION ----------------
-  const computePath = (list: Product[]) => {
+  // ---------------- PATH COMPUTATION (FIXED) ----------------
+  const computePath = (list: Product[], from: Coord) => {
     let fullPath: Coord[] = [];
-    let current = animatedPath[animatedPath.length - 1] || start;
+    let current = from;
 
     for (const p of list) {
       const segment = bfs(current, p.position);
@@ -138,15 +142,19 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
     setCurrentIndex(0);
   };
 
-  const currentCoord = animatedPath[animatedPath.length - 1];
-
   const currentProduct = remaining.find(
     p =>
       p.position.x === currentCoord.x &&
       p.position.y === currentCoord.y
   );
 
-  // ---------------- MOVE STEP ----------------
+  const atExit =
+    currentCoord.x === exit.x &&
+    currentCoord.y === exit.y;
+
+  const allCollected = remaining.length === 0;
+
+  // ---------------- MANUAL MOVE ----------------
   const handleNextStep = () => {
     if (currentIndex + 1 >= path.length) return;
 
@@ -154,6 +162,37 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
     setAnimatedPath(p => [...p, next]);
     setCurrentIndex(prev => prev + 1);
   };
+
+  // ---------------- AUTO MOVE ENGINE (FIXED & STABLE) ----------------
+  useEffect(() => {
+    if (!autoMode) return;
+
+    // No path → stop
+    if (path.length === 0) {
+      setAutoMode(false);
+      return;
+    }
+
+    // Finished → stop
+    if (currentIndex + 1 >= path.length) {
+      setAutoMode(false);
+      return;
+    }
+
+    // On product → pause
+    if (currentProduct) {
+      setAutoMode(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const next = path[currentIndex + 1];
+      setAnimatedPath(prev => [...prev, next]);
+      setCurrentIndex(prev => prev + 1);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [autoMode, currentIndex, path, currentProduct]);
 
   // ---------------- COLLECT ----------------
   const handleCollect = () => {
@@ -167,32 +206,9 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
     setCollected(newCollected);
     setRemaining(newRemaining);
 
-    computePath(newRemaining);
+    // recompute from CURRENT POSITION
+    computePath(newRemaining, currentCoord);
   };
-
-  // ---------------- DIRECTIONS ----------------
-  const directions: string[] = [];
-
-  for (let i = 0; i < path.length - 1; i++) {
-    const a = path[i];
-    const b = path[i + 1];
-
-    if (b.x > a.x) directions.push("Move Right");
-    else if (b.x < a.x) directions.push("Move Left");
-    else if (b.y > a.y) directions.push("Move Down");
-    else if (b.y < a.y) directions.push("Move Up");
-
-    const product = remaining.find(
-      p => p.position.x === b.x && p.position.y === b.y
-    );
-
-    if (product) directions.push(`Pick: ${product.name}`);
-  }
-
-  const currentStep =
-    currentIndex < directions.length
-      ? directions[currentIndex]
-      : "Navigation complete";
 
   // ---------------- UI ----------------
   return (
@@ -209,6 +225,12 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
               currentCoord.x === x &&
               currentCoord.y === y;
 
+            const isVisited = animatedPath.some(
+              p => p.x === x && p.y === y
+            );
+
+            const isInPath = path.some(p => p.x === x && p.y === y);
+
             const productHere = products.find(
               p => p.position.x === x && p.position.y === y
             );
@@ -219,10 +241,12 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
             return (
               <div
                 key={`${x}-${y}`}
-                className={`relative w-14 h-14 flex items-center justify-center border rounded-md
+                className={`relative w-14 h-14 flex items-center justify-center border rounded-md transition-all
                   ${cell === "start" ? "bg-green-500" : ""}
                   ${cell === "exit" ? "bg-red-500" : ""}
                   ${cell === "blocked" ? "bg-gray-700" : ""}
+                  ${isVisited ? "bg-green-800" : ""}
+                  ${isInPath && !isVisited ? "bg-purple-700/60" : ""}
                   ${productHere && !isCollected ? "bg-blue-500" : ""}
                   ${isCollected ? "bg-green-600" : ""}
                 `}
@@ -241,6 +265,22 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
       {/* SIDE PANEL */}
       <div className="w-80 bg-black/60 border border-gray-700 rounded-xl p-5 text-white">
 
+        {/* 🎉 COMPLETE */}
+        {allCollected && atExit && (
+          <div className="mb-4 p-5 bg-green-900/40 border border-green-500 rounded-lg text-center">
+            <div className="text-2xl font-bold text-green-400 mb-2">
+              🎉 All Items Collected!
+            </div>
+
+            <button
+              onClick={() => router.push("/checkout")}
+              className="px-8 py-3 bg-green-600 rounded-xl hover:bg-green-700 transition shadow-lg"
+            >
+              Proceed to Checkout 🧾
+            </button>
+          </div>
+        )}
+
         {/* Pickup */}
         {currentProduct && (
           <div className="mb-4 p-4 bg-blue-900/40 border border-blue-500 rounded-lg text-center">
@@ -257,7 +297,17 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
           </div>
         )}
 
-        {/* Move Button */}
+        {/* AUTO BUTTON (SAFE) */}
+        {!currentProduct && !autoMode && currentIndex < path.length - 1 && (
+          <button
+            onClick={() => setAutoMode(true)}
+            className="w-full mb-4 px-6 py-3 bg-purple-600 rounded-lg hover:bg-purple-700 font-semibold"
+          >
+            🤖 Start Smart Auto Navigation
+          </button>
+        )}
+
+        {/* MANUAL STEP */}
         {!currentProduct && currentIndex < path.length - 1 && (
           <button
             onClick={handleNextStep}
@@ -281,12 +331,6 @@ export default function Grid({ size = 5, products, blocked = [] }: GridProps) {
           {remaining.map((r, i) => (
             <div key={i} className="text-sm">• {r.name}</div>
           ))}
-        </div>
-
-        {/* Instruction */}
-        <div className="p-3 bg-gray-900 rounded-lg">
-          <div className="text-blue-400 font-semibold">Now:</div>
-          <div className="text-lg">{currentStep}</div>
         </div>
       </div>
     </div>

@@ -99,30 +99,26 @@ export default function CartPage() {
   </h2>
 
   <div className="flex gap-4">
-    {/* Navigate Button */}
+
+    {/* ✅ Navigate in Store */}
     <button
-      onClick={() => router.push("/navigate")}
-      className="px-10 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition shadow-lg"
+      onClick={() => router.push("/navigation")}
+      className="px-10 py-3 bg-orange-600 rounded-xl hover:bg-orange-700 transition shadow-lg"
     >
       🧭 Navigate My Cart
     </button>
 
-    {/* Checkout Button */}
+    {/* Checkout */}
     <Link
       href="/checkout"
       className="px-10 py-3 bg-green-600 rounded-xl hover:bg-green-700 transition shadow-lg"
     >
       Proceed to Checkout
     </Link>
-    <button
-  onClick={() => router.push("/navigation")}
-  className="px-10 py-3 bg-blue-600 rounded-xl hover:bg-blue-700 transition shadow-lg"
->
-  Start Store Navigation 🧭
-</button>
 
   </div>
 </div>
+
 </div>
     </main>
   );

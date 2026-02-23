@@ -9,10 +9,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body className="bg-black text-white">
         <CartProvider>
           <Navbar />
-          {children}
+          <main className="pt-20 min-h-screen">
+            {children}
+          </main>
         </CartProvider>
       </body>
     </html>
