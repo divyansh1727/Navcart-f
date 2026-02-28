@@ -3,38 +3,62 @@
 import { useEffect, useState } from "react";
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/orders")
-      .then((res) => res.json())
-      .then((data) => setOrders(data));
+    fetchOrders();
   }, []);
 
-  async function updateStatus(id: string, status: string) {
-    await fetch(`/api/orders/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-
-    const updated = await fetch("/api/orders").then((res) => res.json());
-    setOrders(updated);
+  async function fetchOrders() {
+    try {
+      const res = await fetch("/api/orders");
+      const data = await res.json();
+      setOrders(data);
+    } catch (error) {
+      console.error("Failed to fetch orders");
+    } finally {
+      setLoading(false);
+    }
   }
+
+  async function updateStatus(id: string, status: string) {
+    try {
+      await fetch(`/api/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+
+      // ✅ Update state without refetching everything
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === id ? { ...order, status } : order
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update status");
+    }
+  }
+
+  if (loading) return <p>Loading orders...</p>;
 
   return (
     <div>
       <h1>Manage Orders</h1>
 
-      {orders.map((order: any) => (
-        <div key={order.id} style={{ border: "1px solid gray", margin: 10 }}>
-          <p>Order ID: {order.id}</p>
-          <p>User: {order.user?.email}</p>
-          <p>Total: ${order.total}</p>
-          <p>Status: {order.status}</p>
+      {orders.map((order) => (
+        <div
+          key={order.id}
+          style={{ border: "1px solid gray", margin: 10, padding: 10 }}
+        >
+          <p><strong>Order ID:</strong> {order.id}</p>
+          <p><strong>User:</strong> {order.user?.email || "N/A"}</p>
+          <p><strong>Total:</strong> ${order.total}</p>
+          <p><strong>Status:</strong> {order.status}</p>
 
           <select
-            defaultValue={order.status}
+            value={order.status}
             onChange={(e) => updateStatus(order.id, e.target.value)}
           >
             <option value="pending">pending</option>

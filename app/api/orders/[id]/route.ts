@@ -3,13 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
-
-// ✅ GET order by id (used on success page)
-
+// ✅ GET order by id
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -18,7 +18,7 @@ export async function GET(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         items: true,
         user: true,
@@ -29,7 +29,6 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Optional security check
     if (!session.user.isAdmin && order.userId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -44,13 +43,13 @@ export async function GET(
   }
 }
 
-
-
-// ✅ PATCH (your existing admin update)
+// ✅ PATCH update status (Admin only)
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -61,7 +60,7 @@ export async function PATCH(
     const { status } = await req.json();
 
     const updatedOrder = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: { status },
     });
 

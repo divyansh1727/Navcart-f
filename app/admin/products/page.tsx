@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+
+  const router = useRouter(); // ✅ added
 
   useEffect(() => {
     fetchProducts();
@@ -55,10 +58,24 @@ export default function AdminProductsPage() {
       </div>
 
       {products.map((product: any) => (
-        <div key={product.id} style={{ border: "1px solid gray", margin: 10 }}>
+        <div
+          key={product.id}
+          style={{ border: "1px solid gray", margin: 10, padding: 10 }}
+        >
           <p>{product.name}</p>
           <p>${product.price}</p>
-          <button onClick={() => deleteProduct(product.id)}>Delete</button>
+
+          {/* ✅ NEW EDIT BUTTON */}
+          <button
+            onClick={() => router.push(`/admin/edit/${product.id}`)}
+            style={{ marginRight: 10 }}
+          >
+            Edit
+          </button>
+
+          <button onClick={() => deleteProduct(product.id)}>
+            Delete
+          </button>
         </div>
       ))}
     </div>

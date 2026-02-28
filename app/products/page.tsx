@@ -1,10 +1,21 @@
 "use client";
 
-import { products } from "../data/products";
+import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 
 export default function ProductsPage() {
   const { addToCart } = useCart();
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    async function loadProducts() {
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      setProducts(data);
+    }
+
+    loadProducts();
+  }, []);
 
   return (
     <main className="min-h-screen bg-black text-white px-8 py-24">
@@ -13,19 +24,17 @@ export default function ProductsPage() {
       </h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10">
-        {products.map((product) => (
+        {products.map((product: any) => (
           <div
             key={product.id}
             className="bg-[#020617] rounded-2xl overflow-hidden border border-gray-800 hover:border-blue-600 transition shadow-lg"
           >
-            {/* Image */}
             <img
-              src={product.image}
+              src={product.image || "/placeholder.jpg"}
               alt={product.name}
               className="h-52 w-full object-cover"
             />
 
-            {/* Info */}
             <div className="p-5">
               <h3 className="text-lg font-semibold">
                 {product.name}
@@ -36,15 +45,11 @@ export default function ProductsPage() {
               </p>
 
               <button
-  onClick={() => {
-    alert("clicked");
-    addToCart(product);
-  }}
-  className="mt-5 w-full py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition"
->
-  Add to Cart
-</button>
-
+                onClick={() => addToCart(product)}
+                className="mt-5 w-full py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+              >
+                Add to Cart
+              </button>
             </div>
           </div>
         ))}
